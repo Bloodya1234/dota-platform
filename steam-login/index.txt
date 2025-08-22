@@ -2,13 +2,13 @@
 3:I[7555,[],""]
 4:I[1295,[],""]
 5:I[894,[],"ClientPageRoot"]
-6:I[6311,["811","static/chunks/ae6eea6a-2363d84aaa4e8e81.js","992","static/chunks/bc9e92e6-8c2029ad08ccab66.js","853","static/chunks/853-3a016d0b2125277b.js","719","static/chunks/719-5fce25192eb45a69.js","269","static/chunks/app/steam-login/page-60a2e3308933fd48.js"],"default"]
+6:I[6311,["811","static/chunks/ae6eea6a-2363d84aaa4e8e81.js","992","static/chunks/bc9e92e6-8c2029ad08ccab66.js","853","static/chunks/853-3a016d0b2125277b.js","719","static/chunks/719-5fce25192eb45a69.js","269","static/chunks/app/steam-login/page-3747dc99f813089c.js"],"default"]
 9:I[9665,[],"MetadataBoundary"]
 b:I[9665,[],"OutletBoundary"]
 e:I[4911,[],"AsyncMetadataOutlet"]
 10:I[9665,[],"ViewportBoundary"]
 12:I[6614,[],""]
-0:{"P":null,"b":"yERZ55rhhsmDqXAlsX-_k","p":"/dota-platform","c":["","steam-login",""],"i":false,"f":[[["",{"children":["steam-login",{"children":["__PAGE__",{}]}]},"$undefined","$undefined",true],["",["$","$1","c",{"children":[null,"$L2"]}],{"children":["steam-login",["$","$1","c",{"children":[null,["$","$L3",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L4",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}],{"children":["__PAGE__",["$","$1","c",{"children":[["$","$L5",null,{"Component":"$6","searchParams":{},"params":{},"promises":["$@7","$@8"]}],["$","$L9",null,{"children":"$La"}],null,["$","$Lb",null,{"children":["$Lc","$Ld",["$","$Le",null,{"promise":"$@f"}]]}]]}],{},null,false]},null,false]},null,false],["$","$1","h",{"children":[null,["$","$1","wzWCuN-UwZV9XrwHVGJzM",{"children":[["$","$L10",null,{"children":"$L11"}],null]}],null]}],false]],"m":"$undefined","G":["$12","$undefined"],"s":false,"S":true}
+0:{"P":null,"b":"MNwfiuVHbxWotkhf6n4y8","p":"https://bloodya1234.github.io/dota-platform","c":["","steam-login",""],"i":false,"f":[[["",{"children":["steam-login",{"children":["__PAGE__",{}]}]},"$undefined","$undefined",true],["",["$","$1","c",{"children":[null,"$L2"]}],{"children":["steam-login",["$","$1","c",{"children":[null,["$","$L3",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L4",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","forbidden":"$undefined","unauthorized":"$undefined"}]]}],{"children":["__PAGE__",["$","$1","c",{"children":[["$","$L5",null,{"Component":"$6","searchParams":{},"params":{},"promises":["$@7","$@8"]}],["$","$L9",null,{"children":"$La"}],null,["$","$Lb",null,{"children":["$Lc","$Ld",["$","$Le",null,{"promise":"$@f"}]]}]]}],{},null,false]},null,false]},null,false],["$","$1","h",{"children":[null,["$","$1","nKC6fgAr7t7LKgdq3IrX5",{"children":[["$","$L10",null,{"children":"$L11"}],null]}],null]}],false]],"m":"$undefined","G":["$12","$undefined"],"s":false,"S":true}
 2:E{"digest":"NEXT_HTTP_ERROR_FALLBACK;404"}
 13:"$Sreact.suspense"
 14:I[4911,[],"AsyncMetadata"]
