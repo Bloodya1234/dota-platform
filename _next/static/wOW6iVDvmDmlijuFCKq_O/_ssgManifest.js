@@ -1,1 +1,0 @@
-self.__SSG_MANIFEST=new Set(["\u002Fprofile\u002F[userId]","\u002Fteam\u002F[teamId]","\u002Ftournaments\u002F[id]"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()
