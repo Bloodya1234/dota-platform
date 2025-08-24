@@ -2,22 +2,53 @@
   "name": "dota-platform",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18 <22"
+  },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+     "dev": "next dev",
+    "dev:port": "next dev -p $PORT",
+   "build": "next build && next export",
+    "start": "next start -p 3002",
+    "start:port": "next start -p $PORT"
   },
   "dependencies": {
+    "cookie-session": "^2.1.0",
+    "cors": "^2.8.5",
+    "discord.js": "^14.19.3",
+    "dota2": "^7.0.3",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "firebase": "^11.8.1",
+    "firebase-admin": "^13.4.0",
+    "framer-motion": "^12.22.0",
+    "i18next": "^25.3.0",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "i18next-http-backend": "^3.0.2",
+    "lucide-react": "^0.523.0",
+    "next": "15.3.3",
+    "next-i18next": "^15.4.2",
+    "openid": "^2.0.13",
+    "passport": "^0.7.0",
+    "passport-steam": "^1.0.18",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "next": "15.3.3"
+    "react-i18next": "^15.5.3",
+    "steam": "^1.4.1",
+    "steam-totp": "^2.1.2",
+    "steam-user": "^5.2.3",
+    "zlib-sync": "^0.1.10"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/postcss": "^4.1.12",
+    "@tailwindcss/typography": "^0.5.16",
+    "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
-    "@eslint/eslintrc": "^3"
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.11"
   }
 }

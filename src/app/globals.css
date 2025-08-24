@@ -1,26 +1,243 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 @import "tailwindcss";
 
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap');
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary: #e0f7fa;
+  --accent: #00ffe5;
+  --accent-dark: #00d4b5;
+  --danger: #ff0066;
+  --background: #0d0d0d;
+  --card: #111111;
+  --surface: #121212;
+  --foreground: #ffffff;
+  --muted: #999999;
+  --border: #222222;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* === Base Styles === */
+body {
+  background-color: var(--background);
+  color: var(--primary);
+  margin: 0;
+  padding: 0;
+  font-family: 'Orbitron', sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* === Typography & Links === */
+a {
+  color: var(--accent);
+  transition: color 0.3s;
+}
+
+a:hover {
+  color: var(--foreground);
+  text-shadow: 0 0 6px var(--accent);
+}
+
+/* === Header / Navigation === */
+header {
+  background-color: var(--background);
+  border-bottom: 1px solid var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+header > div {
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+nav {
+  display: flex !important;
+  margin-left: auto !important;
+}
+
+.nav-link {
+  padding: 0.25rem 0.5rem;
+  color: var(--accent);
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  color: var(--foreground);
+  text-shadow: 0 0 6px var(--accent);
+}
+
+/* === Utility: Glow Text === */
+.text-glow {
+  text-shadow: 0 0 6px var(--accent), 0 0 12px var(--accent);
+}
+
+/* === Card Wrapper === */
+.card {
+  background-color: var(--card);
+  border: 1px solid var(--accent-dark);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 0 12px rgba(0, 255, 229, 0.1), 0 0 24px rgba(0, 255, 229, 0.05);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 16px var(--accent), 0 0 30px var(--accent);
+}
+
+/* === Neon Button === */
+.glow-button {
+  position: relative;
+  clip-path: polygon(
+    10% 0%, 90% 0%,
+    100% 20%, 100% 80%,
+    90% 100%, 10% 100%,
+    0% 80%, 0% 20%
+  );
+  padding: 0.5rem 2rem;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: 2px solid currentColor;
+  color: var(--accent);
+  background: transparent;
+  box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
+.glow-button:hover {
+  background: var(--accent);
+  color: black;
+  box-shadow: 0 0 16px var(--accent), 0 0 32px var(--accent);
+  transform: translateY(-1px);
+}
+
+/* Glow color variables */
+.glow-green {
+  --accent: #00ffc3;
+  color: #00ffc3;
+}
+.glow-red {
+  --accent: #ff0066;
+  color: #ff0066;
+}
+.glow-orange {
+  --accent: #ffae00;
+  color: #ffae00;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* === Logout Button Style === */
+.logout-button {
+  position: relative;
+  display: inline-block;
+  padding: 0.75rem 2.5rem;
+  font-weight: bold;
+  color: #ff66c4;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background-color: #0a0a0a;
+  border: 2px solid #ff66c4;
+  clip-path: polygon(
+    8px 0%, calc(100% - 8px) 0%, 100% 8px,
+    100% calc(100% - 8px), calc(100% - 8px) 100%,
+    8px 100%, 0% calc(100% - 8px), 0% 8px
+  );
+  box-shadow: 0 0 10px #ff66c4, 0 0 20px #ff66c4;
+  transition: all 0.3s ease;
+}
+
+.logout-button:hover {
+  background-color: #ff66c4;
+  color: #0a0a0a;
+  box-shadow: 0 0 14px #ff66c4, 0 0 28px #ff66c4;
+  transform: translateY(-1px);
+}
+
+/* === Section spacing === */
+.section {
+  margin-bottom: 3rem;
+}
+
+/* === Accessibility Fixes === */
+button:focus,
+a:focus {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+}
+
+/* === Avatar Glow Ring === */
+.avatar-glow-ring {
+  background: radial-gradient(circle, rgba(0,255,255,0.15), transparent 70%);
+  border: 2px solid #00eaff;
+  border-radius: 9999px;
+  box-shadow:
+    0 0 10px #00eaff,
+    0 0 25px #00eaff,
+    inset 0 0 10px #00eaff;
+  animation: pulseAvatarGlow 3s ease-in-out infinite;
+}
+
+@keyframes pulseAvatarGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 10px #00eaff,
+      0 0 25px #00eaff,
+      inset 0 0 10px #00eaff;
+  }
+  50% {
+    box-shadow:
+      0 0 20px #00eaff,
+      0 0 40px #00eaff,
+      inset 0 0 15px #00eaff;
+  }
+}
+
+/* === Hex Button Styles === */
+.hex-button {
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  clip-path: polygon(10% 0%, 90% 0%, 100% 15%, 100% 85%, 90% 100%, 10% 100%, 0% 85%, 0% 15%);
+  border-radius: 0.5rem;
+  border: 1px solid #555;
+  background-color: #0c0c0f;
+  color: #fff;
+  transition: all 0.3s ease;
+}
+
+.hex-button:hover {
+  box-shadow: 0 0 6px #00ffe5, 0 0 12px #00ffe5;
+  border-color: #00ffe5;
+}
+
+.hex-button.active-cyan {
+  background-color: rgba(0, 255, 227, 0.1);
+  color: #00ffe5;
+  border-color: #00ffe5;
+  box-shadow: 0 0 10px #00ffe5;
+}
+
+.hex-button.active-green {
+  background-color: rgba(0, 255, 195, 0.1);
+  color: #00ffc3;
+  border-color: #00ffc3;
+  box-shadow: 0 0 10px #00ffc3;
+}
+
+/* === Panel Background === */
+.glow-panel {
+  background: radial-gradient(circle at center, #0f0f1a 0%, #050511 100%);
+  box-shadow: 0 0 10px #00ffff40, inset 0 0 6px #00ffff20;
+  border-radius: 1rem;
+  padding: 1rem;
 }
