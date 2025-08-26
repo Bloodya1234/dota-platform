@@ -1,40 +1,20 @@
 'use client';
 
 import { useState } from 'react';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { app } from '@/firebase'; // см. шаг 2: правильная инициализация клиента
 
-async function getFirebaseAuth() {
-  const [{ getAuth, signInWithEmailAndPassword }, { initializeApp, getApps, getApp }] =
-    await Promise.all([import('firebase/auth'), import('firebase/app')]);
-
-  const cfg = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId:
-      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  };
-
-  if (!cfg.apiKey || !cfg.authDomain || !cfg.appId) {
-    throw new Error('Missing NEXT_PUBLIC_FIREBASE_* env vars for client SDK');
-  }
-
-  const app = getApps().length ? getApp() : initializeApp(cfg);
-  return { auth: getAuth(app), signInWithEmailAndPassword };
-}
-
-export default function AdminLoginPage() {
-  const [email, setEmail]  = useState('');
-  const [pass, setPass]    = useState('');
-  const [loading, setLoad] = useState(false);
-  const [error, setError]  = useState('');
+export default function AdminLoginClient() {
+  const [email, setEmail]   = useState('');
+  const [pass, setPass]     = useState('');
+  const [loading, setLoad]  = useState(false);
+  const [error, setError]   = useState('');
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setLoad(true); setError('');
     try {
-      const { auth, signInWithEmailAndPassword } = await getFirebaseAuth();
+      const auth = getAuth(app);
       await signInWithEmailAndPassword(auth, email, pass);
       window.location.href = '/tournaments/admin';
     } catch (err) {
