@@ -1,32 +1,31 @@
-import { adminAuth } from '@/lib/firebase-admin';
+// src/app/api/sessionLogin/route.js
+export const runtime = 'nodejs';
+
 import { cookies } from 'next/headers';
+import { adminAuth } from '@/lib/firebase-admin';
 
 export async function POST(req) {
-  const { token } = await req.json();
-  const maxAge = 60 * 60 * 24 * 5; // 5 days
-
   try {
-    const sessionCookie = await adminAuth.createSessionCookie(token, {
-      expiresIn: maxAge * 1000,
-    });
+    const { token } = await req.json();
+    if (!token) {
+      return new Response(JSON.stringify({ message: 'Token required' }), { status: 400 });
+    }
 
-    const cookieStore = cookies();
+    const auth = adminAuth();
+    const maxAgeSec = 60 * 60 * 24 * 5; // 5 days
+    const sessionCookie = await auth.createSessionCookie(token, { expiresIn: maxAgeSec * 1000 });
 
-    // ✅ Set the session cookie correctly
-    cookieStore.set('__session', sessionCookie, {
-      maxAge,
+    cookies().set('session', sessionCookie, {
       httpOnly: true,
-      secure: false, // ✅ Set to true in production
       sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
       path: '/',
+      maxAge: maxAgeSec,
     });
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (err) {
-    console.error('❌ Failed to create session cookie:', err);
-    return new Response('Invalid token', { status: 401 });
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  } catch (e) {
+    console.error('sessionLogin error:', e?.message || e);
+    return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
   }
 }

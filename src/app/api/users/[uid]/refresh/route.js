@@ -1,42 +1,23 @@
-import { db } from '@/lib/firebase-admin';
-import { fetchOpenDotaStats } from '@/lib/opendota';
+// src/app/api/users/[uid]/refresh/route.js
+export const runtime = 'nodejs';
 
-export async function GET(req, { params }) {
-  const { uid } = params;
-  if (!uid) return new Response('Missing UID', { status: 400 });
+import { getDb } from '@/lib/firebase-admin';
 
+export async function POST(_req, { params }) {
   try {
-    const userRef = db.collection('users').doc(uid);
-    const userSnap = await userRef.get();
-    if (!userSnap.exists) return new Response('User not found', { status: 404 });
-
-    const userData = userSnap.data();
-
-    // Fetch latest stats from OpenDota
-    const steamId32 = userData.steamId32;
-    if (steamId32) {
-      const updatedStats = await fetchOpenDotaStats(steamId32);
-
-      await userRef.update({
-        ...updatedStats,
-        stats: {
-          ...updatedStats,
-        },
-      });
-
-      // Merge and return updated user data
-      return new Response(JSON.stringify({ ...userData, ...updatedStats }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    const db = getDb();
+    const ref = db.collection('users').doc(params.uid);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      return new Response(JSON.stringify({ message: 'User not found' }), { status: 404 });
     }
 
-    return new Response(JSON.stringify(userData), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // Здесь могла быть твоя логика обновления профиля (OpenDota/Steam и т.д.)
+    await ref.update({ refreshedAt: new Date() });
+
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (err) {
-    console.error('❌ Failed to fetch and update user:', err);
-    return new Response('Internal Server Error', { status: 500 });
+    console.error('❌ POST /api/users/[uid]/refresh error:', err);
+    return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 });
   }
 }

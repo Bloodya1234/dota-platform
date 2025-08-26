@@ -1,55 +1,105 @@
-// ✅ FILE: /app/api/tournaments/leave/route.js
-import { db } from '@/lib/firebase-admin';
+// src/app/api/tournaments/leave/route.js
+export const runtime = 'nodejs';
+
+import { getDb } from '@/lib/firebase-admin';
 import { getAuthSession } from '@/lib/auth';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(req) {
   try {
     const session = await getAuthSession();
-    if (!session?.user?.uid) {
+    const uid = session?.user?.uid;
+    if (!uid || !uid.startsWith('steam:')) {
       return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
     }
 
+    const db = getDb();
     const { tournamentId } = await req.json();
     if (!tournamentId) {
-      return new Response(JSON.stringify({ message: 'Missing tournament ID' }), { status: 400 });
+      return new Response(JSON.stringify({ message: 'tournamentId required' }), { status: 400 });
     }
 
     const tournamentRef = db.collection('tournaments').doc(tournamentId);
-    const snapshot = await tournamentRef.get();
-    if (!snapshot.exists) {
+    const [tSnap, uSnap] = await Promise.all([
+      tournamentRef.get(),
+      db.collection('users').doc(uid).get(),
+    ]);
+
+    if (!tSnap.exists) {
       return new Response(JSON.stringify({ message: 'Tournament not found' }), { status: 404 });
     }
+    if (!uSnap.exists) {
+      return new Response(JSON.stringify({ message: 'User not found' }), { status: 404 });
+    }
 
-    const tournament = snapshot.data();
-    const steamId = session.user.uid;
+    const tournament = tSnap.data();
+    const user = uSnap.data();
 
-    // For 1v1 tournament
+    // 1v1 — убираем игрока
     if (tournament.type === '1v1') {
-      const updatedPlayers = tournament.players?.filter((id) => id !== steamId) || [];
-      await tournamentRef.update({
-        players: updatedPlayers,
-        currentSlots: updatedPlayers.length,
-      });
+      const updates = {
+        players: FieldValue.arrayRemove(user.steamId),
+        playerObjects: FieldValue.arrayRemove({
+          steamId: user.steamId,
+          username: user.username || null,
+          discordId: user.discordId || null,
+        }),
+      };
+
+      // безопасное уменьшение счётчика
+      const currentSlots = Math.max(0, (tournament.currentSlots || 0) - 1);
+      updates.currentSlots = currentSlots;
+
+      // если был isLocked — снимаем
+      if (tournament.isLocked) updates.isLocked = false;
+
+      await tournamentRef.update(updates);
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
-    // For team-based tournaments
-    if (tournament.type !== '1v1' && tournament.teams?.length) {
-      const updatedTeams = tournament.teams
-        .map((team) => ({
-          ...team,
-          members: team.members?.filter((m) => m.id !== steamId),
-        }))
-        .filter((team) => team.members?.length > 0);
+    // 5v5 / turbo — капитан выводит команду
+    if (['5v5', 'turbo'].includes(tournament.type)) {
+      if (!user.teamId) {
+        return new Response(JSON.stringify({ message: 'You are not in a team' }), { status: 400 });
+      }
 
-      await tournamentRef.update({
-        teams: updatedTeams,
-        currentSlots: updatedTeams.reduce((sum, team) => sum + team.members.length, 0),
-      });
+      const teamRef = db.collection('teams').doc(user.teamId);
+      const teamSnap = await teamRef.get();
+      if (!teamSnap.exists) {
+        return new Response(JSON.stringify({ message: 'Team not found' }), { status: 404 });
+      }
+
+      const team = teamSnap.data() || {};
+      const teamId = team.id || teamSnap.id;
+
+      if (team.captainId !== user.steamId) {
+        return new Response(JSON.stringify({ message: 'Only the team captain can leave/unregister the team' }), { status: 403 });
+      }
+
+      const updates = {
+        teams: FieldValue.arrayRemove(teamId),
+        teamObjects: FieldValue.arrayRemove({
+          teamId,
+          teamName: team.name || null,
+          players: (Array.isArray(team.members) ? team.members : []).map(m => ({
+            steamId: m.steamId,
+            username: m.username || null,
+            discordId: m.discordId || null,
+          })),
+        }),
+      };
+
+      const currentSlots = Math.max(0, (tournament.currentSlots || 0) - 1);
+      updates.currentSlots = currentSlots;
+      if (tournament.isLocked) updates.isLocked = false;
+
+      await tournamentRef.update(updates);
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    return new Response(JSON.stringify({ message: 'Invalid tournament type' }), { status: 400 });
   } catch (err) {
-    console.error('❌ Leave tournament error:', err);
+    console.error('❌ LEAVE tournament error:', err);
     return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 });
   }
 }

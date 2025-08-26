@@ -26,7 +26,11 @@ export async function GET(req) {
 
   console.log('🔍 Full incoming URL:', url.toString());
   console.log('🔎 openid.return_to:', params['openid.return_to']);
-  console.log('🔎 openid.realm (should match return_to root):', 'https://localhost:3000/');
+  console.log(
+  '🔎 openid.realm (should match return_to root):',
+  process.env.NEXT_PUBLIC_BASE_URL + '/'
+);
+
 
   // 🚨 Handle Steam OpenID failure
   if (params['openid.mode'] === 'error') {

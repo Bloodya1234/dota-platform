@@ -1,10 +1,12 @@
-cat > src/lib/opendota.js <<'EOF'
-export async function fetchOpenDotaStats(steamId) {
-  if (!steamId) return { ok: false, error: "missing steamId" };
-  const res = await fetch(`https://api.opendota.com/api/players/${steamId}`, { cache: "no-store" });
-  if (!res.ok) return { ok: false, status: res.status };
-  const data = await res.json();
-  return { ok: true, data };
+const API_BASE = 'https://api.opendota.com/api';
+
+export async function fetchOpenDotaStats(steamId32) {
+  const [wlRes, profileRes] = await Promise.all([
+    fetch(`${API_BASE}/players/${steamId32}/wl`, { cache: 'no-store' }),
+    fetch(`${API_BASE}/players/${steamId32}`, { cache: 'no-store' }),
+  ]);
+  return {
+    wl: await wlRes.json(),
+    profile: await profileRes.json(),
+  };
 }
-export default { fetchOpenDotaStats };
-EOF

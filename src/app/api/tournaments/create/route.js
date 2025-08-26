@@ -1,49 +1,25 @@
-import { db } from '@/lib/firebase-admin';
-import { getAuthSession } from '@/lib/auth';
+// src/app/api/tournaments/create/route.js
+export const runtime = 'nodejs';
+
+import { getDb } from '@/lib/firebase-admin';
 
 export async function POST(req) {
   try {
-    const session = await getAuthSession();
-    if (!session?.user?.uid) {
-      return new Response('Unauthorized', { status: 401 });
+    const db = getDb();
+    const body = await req.json();
+
+    if (!body || typeof body !== 'object') {
+      return new Response(JSON.stringify({ message: 'Invalid body' }), { status: 400 });
     }
 
-    const userSnap = await db.collection('users').doc(session.user.uid).get();
-    if (!userSnap.exists) {
-      return new Response('User not found', { status: 404 });
-    }
-
-    const user = userSnap.data();
-    if (user.role !== 'admin') {
-      return new Response('Forbidden', { status: 403 });
-    }
-
-    const data = await req.json();
-    const { name, type, bracket, maxSlots, prize, rules = '' } = data;
-
-    if (!name || !type || !bracket || !maxSlots || !prize) {
-      return new Response('Missing required fields', { status: 400 });
-    }
-
-    const numericSlots = Number(maxSlots);
-    const format = numericSlots === 2 ? 'single' : 'bracket';
-
-    await db.collection('tournaments').add({
-      name,
-      type,
-      bracket,
-      maxSlots: numericSlots,
-      currentSlots: 0,
-      prize,
-      rules,
+    const docRef = await db.collection('tournaments').add({
+      ...body,
       createdAt: new Date(),
-      isOpen: true,
-      format, // ✅ auto-detected format field
     });
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
+    return new Response(JSON.stringify({ ok: true, id: docRef.id }), { status: 200 });
   } catch (err) {
-    console.error('🔥 Failed to create tournament:', err);
-    return new Response('Internal Server Error', { status: 500 });
+    console.error('❌ CREATE tournament error:', err);
+    return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 });
   }
 }

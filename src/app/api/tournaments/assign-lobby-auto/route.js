@@ -1,7 +1,14 @@
-import { db } from '@/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
+export const runtime = 'nodejs';
 import { getAuthSession } from '@/lib/auth';
 
-export async function POST(req) {
+  
+  
+
+
+
+
+export async function POST(req) {const db = getDb();
   try {
     const session = await getAuthSession();
     console.log('👤 Session:', session);
@@ -36,32 +43,56 @@ export async function POST(req) {
 
     // Update lobby info
     await tournamentRef.update({
-  lobbyName,
-  lobbyPassword,
-  serverRegion, // ✅ New field
-  lobbyAssignedAt: new Date(),
-});
+      lobbyName,
+      lobbyPassword,
+      serverRegion,
+      lobbyAssignedAt: new Date(),
+    });
 
+    // ---- DM sender (uses external bot service) ----
+    const botUrl = process.env.BOT_SERVER_URL; // e.g. https://your-bot-service.com
+    if (!botUrl) {
+      console.error('❗ BOT_SERVER_URL is not set');
+      return new Response(JSON.stringify({ message: 'Server is not configured' }), { status: 500 });
+    }
 
     const messages = [];
+
     const notifyPlayer = async (discordId, username) => {
       try {
-        const res = await fetch('http://localhost:3001/send-dm', {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10_000);
+
+        const res = await fetch(`${botUrl.replace(/\/$/, '')}/send-dm`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(process.env.BOT_API_KEY ? { Authorization: `Bearer ${process.env.BOT_API_KEY}` } : {}),
+          },
           body: JSON.stringify({
             discordId,
-           message: `🎮 Your match for **${tournament.name}** is ready!\n\n🧩 Lobby: \`${lobbyName}\`\n🔐 Password: \`${lobbyPassword}\`\n🌍 Region: \`${serverRegion || 'Not specified'}\``,
+            message:
+              `🎮 Your match for **${tournament.name}** is ready!\n\n` +
+              `🧩 Lobby: \`${lobbyName}\`\n` +
+              `🔐 Password: \`${lobbyPassword}\`\n` +
+              `🌍 Region: \`${serverRegion || 'Not specified'}\``,
           }),
+          signal: controller.signal,
+          cache: 'no-store',
         });
+
+        clearTimeout(timeout);
 
         if (res.ok) {
           messages.push(`✅ Sent to ${username || discordId}`);
         } else {
-          console.error('❌ Failed to send DM:', discordId);
+          const text = await res.text().catch(() => '');
+          console.error('❌ Failed to send DM:', discordId, res.status, text?.slice(0, 300));
+          messages.push(`❌ DM failed for ${username || discordId} (${res.status})`);
         }
       } catch (err) {
-        console.error('🔥 Error notifying player:', err.message || err);
+        console.error('🔥 Error notifying player:', err?.name === 'AbortError' ? 'Timeout' : err?.message || err);
+        messages.push(`❌ DM error for ${username || discordId}`);
       }
     };
 
@@ -85,11 +116,7 @@ export async function POST(req) {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      sentTo: messages,
-    }), { status: 200 });
-
+    return new Response(JSON.stringify({ success: true, sentTo: messages }), { status: 200 });
   } catch (err) {
     console.error('🔥 Fatal error in assign-lobby-auto:', err);
     return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 });

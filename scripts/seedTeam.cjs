@@ -2,7 +2,7 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 
 // Load service account key
-const serviceAccount = require('../serviceAccountKey.json');
+const serviceAccount = require('../');
 
 // Initialize Firebase
 if (!admin.apps.length) {

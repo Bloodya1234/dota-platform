@@ -107,7 +107,8 @@ export async function GET(req) {
       console.error('❌ Failed to contact bot server for invite:', inviteErr);
     }
 
-    return NextResponse.redirect('https://localhost:3000/profile');
+    return NextResponse.redirect('/profile');
+
   } catch (err) {
     console.error('🚨 Discord OAuth error:', err);
     return NextResponse.json({

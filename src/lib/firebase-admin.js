@@ -1,15 +1,30 @@
-import { getApps, initializeApp, applicationDefault } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
+import admin from 'firebase-admin';
 
-const app = getApps().length
-  ? getApps()[0]
-  : initializeApp({
-      credential: applicationDefault(),
-      projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    });
+let app;
+if (!admin.apps.length) {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-export const db = getFirestore(app);
-export const adminAuth = getAuth(app);
+  if (privateKey && privateKey.includes('\\n')) {
+    privateKey = privateKey.replace(/\\n/g, '\n');
+  }
 
-export default { db, adminAuth };
+  app = admin.initializeApp({
+    credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
+  });
+} else {
+  app = admin.app();
+}
+
+export function getDb() {
+  return admin.firestore();
+}
+
+export function adminAuth() {
+  return admin.auth();
+}
+
+// опционально — если где-то импортируют дефолт:
+const adminApis = { getDb, adminAuth };
+export default adminApis;

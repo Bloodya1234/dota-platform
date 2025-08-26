@@ -116,7 +116,10 @@ app.post('/check-server-membership', async (req, res) => {
 
 // ✅ Start the bot server
 app.listen(PORT, () => {
-  console.log(`🚀 Discord bot server running at http://localhost:${PORT}`);
+console.log(
+  `🚀 Discord bot server running at ${process.env.BOT_SERVER_URL || `http://localhost:${PORT}`}`
+);
+
 });
 
 import {

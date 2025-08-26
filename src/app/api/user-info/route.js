@@ -1,30 +1,28 @@
-import { db } from '@/lib/firebase-admin';
+// src/app/api/user-info/route.js
+export const runtime = 'nodejs';
+
+import { getDb } from '@/lib/firebase-admin';
 import { getAuthSession } from '@/lib/auth';
 
 export async function GET() {
   try {
     const session = await getAuthSession();
+    const uid = session?.user?.uid;
 
-    if (!session?.user?.uid) {
-      console.warn('No session found');
-      return new Response('Unauthorized', { status: 401 });
+    if (!uid) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
     }
 
-    const userSnap = await db.collection('users').doc(session.user.uid).get();
-
-    if (!userSnap.exists) {
-      console.warn('User doc not found for UID:', session.user.uid);
-      return new Response('User not found', { status: 404 });
+    const db = getDb();
+    const snap = await db.collection('users').doc(uid).get();
+    if (!snap.exists) {
+      return new Response(JSON.stringify({ message: 'User not found' }), { status: 404 });
     }
 
-    const user = userSnap.data();
-
-    return new Response(
-      JSON.stringify({ uid: session.user.uid, role: user.role || 'user' }),
-      { status: 200 }
-    );
+    const user = snap.data();
+    return new Response(JSON.stringify({ user }), { status: 200 });
   } catch (err) {
-    console.error('🔥 /api/user-info error:', err);
-    return new Response('Internal Server Error', { status: 500 });
+    console.error('❌ USER-INFO error:', err);
+    return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 });
   }
 }

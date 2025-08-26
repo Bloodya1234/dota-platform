@@ -1,7 +1,12 @@
-import { DISCORD_ADMIN_WEBHOOK } from '@/lib/config';
-import { db } from '@/lib/firebase-admin';
+// src/app/api/tournaments/join/route.js
+export const runtime = 'nodejs';
+
+import { getDb } from '@/lib/firebase-admin';
 import { getAuthSession } from '@/lib/auth';
 import { FieldValue } from 'firebase-admin/firestore';
+
+// Берём вебхук прямо из ENV, чтобы не тянуть внешние модули
+const ADMIN_WEBHOOK = process.env.DISCORD_ADMIN_WEBHOOK ?? '';
 
 const RANK_BRACKETS = {
   'Herald': [10, 19],
@@ -10,29 +15,29 @@ const RANK_BRACKETS = {
   'Ancient-Divine': [60, 79],
   'Immortal': [80, 90],
 };
+
 async function getRankedMatchCount(steamId32) {
   try {
-    const res = await fetch(`https://api.opendota.com/api/players/${steamId32}/matches?limit=1000`);
+    const res = await fetch(
+      `https://api.opendota.com/api/players/${steamId32}/matches?limit=1000`,
+      { cache: 'no-store' }
+    );
     const matches = await res.json();
-    if (!Array.isArray(matches)) {
-      console.warn('Invalid response from OpenDota ranked match count:', matches);
-      return 0;
-    }
-    return matches.filter((m) => m.lobby_type === 7).length;
-  } catch (err) {
-    console.error('Error fetching ranked match count:', err);
+    if (!Array.isArray(matches)) return 0;
+    return matches.filter(m => m?.lobby_type === 7).length;
+  } catch (e) {
+    console.warn('OpenDota error:', e?.message || e);
     return 0;
   }
 }
 
 function rankTierMatchesBracket(rankTier, bracket) {
   const [min, max] = RANK_BRACKETS[bracket] || [];
-  return rankTier >= min && rankTier <= max;
+  return typeof rankTier === 'number' && rankTier >= min && rankTier <= max;
 }
 
 function convertRankTierToRank(rankTier) {
-  if (!rankTier || typeof rankTier !== 'number') return 'N/A';
-
+  if (typeof rankTier !== 'number') return 'N/A';
   const ranges = {
     Herald: [10, 19],
     Guardian: [20, 29],
@@ -43,207 +48,190 @@ function convertRankTierToRank(rankTier) {
     Divine: [70, 79],
     Immortal: [80, 90],
   };
-
   for (const [rank, [min, max]] of Object.entries(ranges)) {
     if (rankTier >= min && rankTier <= max) return rank;
   }
-
   return 'N/A';
 }
 
 async function validatePlayer(user, bracket) {
   const issues = [];
+  const steamIdRaw = user?.steamId || '';
+  const steamId64 = steamIdRaw.startsWith('steam:') ? steamIdRaw.slice(6) : steamIdRaw;
 
-  const steamIdRaw = user.steamId || '';
-  const steamId64 = steamIdRaw.startsWith('steam:') ? steamIdRaw.replace('steam:', '') : steamIdRaw;
-  const steamId32 = BigInt(steamId64) - 76561197960265728n;
+  let steamId32;
+  try {
+    steamId32 = BigInt(steamId64) - 76561197960265728n;
+  } catch {
+    issues.push('Invalid Steam ID');
+    return issues;
+  }
 
   const rankedMatchCount = await getRankedMatchCount(steamId32);
-  console.log('✅ Live rankedMatchCount:', rankedMatchCount);
-
   if (rankedMatchCount < 200) {
     issues.push(`At least 200 ranked matches are required (found ${rankedMatchCount})`);
   }
-
-  if (!user.publicMatchHistory) {
+  if (!user?.publicMatchHistory) {
     issues.push('Public match history must be enabled');
   }
-
-  const playerRank = convertRankTierToRank(user.rankTier);
-  if (!rankTierMatchesBracket(user.rankTier, bracket)) {
+  const playerRank = convertRankTierToRank(user?.rankTier);
+  if (!rankTierMatchesBracket(user?.rankTier, bracket)) {
     issues.push(`Your rank (${playerRank}) does not match the bracket: ${bracket}`);
   }
-
   return issues;
 }
-
 
 export async function POST(req) {
   try {
     const session = await getAuthSession();
     const uid = session?.user?.uid;
-
     if (!uid || !uid.startsWith('steam:')) {
-      console.error('❌ Invalid Steam UID in session:', uid);
       return new Response(JSON.stringify({ message: 'Unauthorized or invalid Steam login' }), { status: 401 });
     }
 
+    const db = getDb();
+
     const { tournamentId } = await req.json();
+    if (!tournamentId) {
+      return new Response(JSON.stringify({ message: 'tournamentId required' }), { status: 400 });
+    }
+
     const tournamentRef = db.collection('tournaments').doc(tournamentId);
     const tournamentSnap = await tournamentRef.get();
     if (!tournamentSnap.exists) {
       return new Response(JSON.stringify({ message: 'Tournament not found' }), { status: 404 });
     }
-
     const tournament = tournamentSnap.data();
-    const userRef = db.collection('users').doc(uid);
-    const userSnap = await userRef.get();
+
+    const userSnap = await db.collection('users').doc(uid).get();
     if (!userSnap.exists) {
       return new Response(JSON.stringify({ message: 'User not found' }), { status: 404 });
     }
-
     const user = userSnap.data();
 
-    console.log('✅ User data before validation:', {
-      steamId: user.steamId,
-      rankTier: user.rankTier,
-      rankedMatchCount: user.rankedMatchCount,
-      publicMatchHistory: user.publicMatchHistory,
-    });
-
-    // ✅ 1v1
+    // ===== 1v1 =====
     if (tournament.type === '1v1') {
-  if ((tournament.players || []).includes(user.steamId)) {
-    return new Response(JSON.stringify({ message: 'You already joined this tournament' }), { status: 400 });
-  }
+      if ((tournament.players || []).includes(user.steamId)) {
+        return new Response(JSON.stringify({ message: 'You already joined this tournament' }), { status: 400 });
+      }
 
-  const issues = validatePlayer(user, tournament.bracket);
-  if (issues.length) {
-    return new Response(JSON.stringify({ message: 'Join failed', reasons: issues }), { status: 400 });
-  }
+      const issues = await validatePlayer(user, tournament.bracket);
+      if (issues.length) {
+        return new Response(JSON.stringify({ message: 'Join failed', reasons: issues }), { status: 400 });
+      }
 
-  const updatedSlots = tournament.currentSlots + 1;
-
- const updates = {
-  currentSlots: updatedSlots,
-  players: FieldValue.arrayUnion(user.steamId),
-  playerObjects: FieldValue.arrayUnion({
-    steamId: user.steamId,
-    username: user.username || null,
-    discordId: user.discordId || null,
-  }),
-};
-
-
-  if (updatedSlots === tournament.maxSlots && !tournament.isLocked) {
-    updates.isLocked = true;
-    updates.graceStart = new Date();
-
-    if (DISCORD_ADMIN_WEBHOOK) {
-      await fetch(DISCORD_ADMIN_WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: `📢 Tournament "${tournament.name}" is now full and locked. Ready for lobby assignment.`,
+      const updatedSlots = (tournament.currentSlots || 0) + 1;
+      const updates = {
+        currentSlots: updatedSlots,
+        players: FieldValue.arrayUnion(user.steamId),
+        playerObjects: FieldValue.arrayUnion({
+          steamId: user.steamId,
+          username: user.username || null,
+          discordId: user.discordId || null,
         }),
-      });
+      };
+
+      if (updatedSlots === tournament.maxSlots && !tournament.isLocked) {
+        updates.isLocked = true;
+        updates.graceStart = new Date();
+        if (ADMIN_WEBHOOK) {
+          try {
+            await fetch(ADMIN_WEBHOOK, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: `📢 Tournament "${tournament.name}" is now full and locked. Ready for lobby assignment.`,
+              }),
+            });
+          } catch (e) {
+            console.warn('Webhook failed:', e?.message || e);
+          }
+        }
+      }
+
+      await tournamentRef.update(updates);
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
     }
-  }
 
-  await tournamentRef.update(updates);
-
-  return new Response(JSON.stringify({ success: true }), { status: 200 });
-}
-
-    // ✅ 5v5 / turbo
+    // ===== 5v5 / turbo =====
     if (['5v5', 'turbo'].includes(tournament.type)) {
-  if (!user.teamId) {
-    return new Response(JSON.stringify({ message: 'You must be in a team to join this tournament' }), { status: 400 });
-  }
+      if (!user.teamId) {
+        return new Response(JSON.stringify({ message: 'You must be in a team to join this tournament' }), { status: 400 });
+      }
 
-  const teamRef = db.collection('teams').doc(user.teamId);
-  const teamSnap = await teamRef.get();
-  if (!teamSnap.exists) {
-    return new Response(JSON.stringify({ message: 'Team not found' }), { status: 404 });
-  }
+      const teamRef = db.collection('teams').doc(user.teamId);
+      const teamSnap = await teamRef.get();
+      if (!teamSnap.exists) {
+        return new Response(JSON.stringify({ message: 'Team not found' }), { status: 404 });
+      }
+      const team = teamSnap.data() || {};
+      const teamId = team.id || teamSnap.id;
 
-  const team = teamSnap.data();
+      if ((tournament.teams || []).includes(teamId)) {
+        return new Response(JSON.stringify({ message: 'Your team already joined this tournament' }), { status: 400 });
+      }
+      if (team.captainId !== user.steamId) {
+        return new Response(JSON.stringify({ message: 'Only the team captain can register the team' }), { status: 403 });
+      }
 
-  if ((tournament.teams || []).includes(team.id)) {
-    return new Response(JSON.stringify({ message: 'Your team already joined this tournament' }), { status: 400 });
-  }
+      const members = Array.isArray(team.members) ? team.members : [];
+      const issues = [];
+      for (const member of members) {
+        const mi = await validatePlayer(member, tournament.bracket);
+        if (mi.length) issues.push(`${member.username || member.id || member.steamId}: ${mi.join(', ')}`);
+      }
 
-  if (team.captainId !== user.steamId) {
-    return new Response(JSON.stringify({ message: 'Only the team captain can register the team' }), { status: 403 });
-  }
+      const rankEligible = members.filter(m => typeof m.rankTier === 'number');
+      if (!rankEligible.length) {
+        return new Response(JSON.stringify({ message: 'Cannot calculate team average rank: no valid rank tiers found.' }), { status: 400 });
+      }
+      const totalTier = rankEligible.reduce((s, m) => s + m.rankTier, 0);
+      const avgTier = Math.round(totalTier / rankEligible.length);
+      if (!rankTierMatchesBracket(avgTier, tournament.bracket)) {
+        const avgRankName = convertRankTierToRank(avgTier);
+        return new Response(JSON.stringify({ message: `Team average rank is ${avgRankName}. Please find a tournament that matches your team's average rank.` }), { status: 400 });
+      }
 
-  const members = team.members || [];
-  const issues = [];
+      if (issues.length) {
+        return new Response(JSON.stringify({ message: 'Join failed', reasons: issues }), { status: 400 });
+      }
 
-  for (const member of members) {
-  const memberIssues = await validatePlayer(member, tournament.bracket);
-  if (memberIssues.length) {
-    issues.push(`${member.username || member.id}: ${memberIssues.join(', ')}`);
-  }
-}
-
-  if (issues.length) {
-    return new Response(JSON.stringify({ message: 'Join failed', reasons: issues }), { status: 400 });
-  }
-
-  const updatedSlots = tournament.currentSlots + 1;
-
-  const updates = {
-  currentSlots: updatedSlots,
-  teams: FieldValue.arrayUnion(team.id),
-  teamObjects: FieldValue.arrayUnion({
-    teamId: team.id,
-    teamName: team.name || null,
-    players: members.map(m => ({
-      steamId: m.steamId,
-      username: m.username || null,
-      discordId: m.discordId || null,
-    })),
-  }),
-};
-
-
-  if (updatedSlots === tournament.maxSlots && !tournament.isLocked) {
-    updates.isLocked = true;
-    updates.graceStart = new Date();
-
-    if (DISCORD_ADMIN_WEBHOOK) {
-      await fetch(DISCORD_ADMIN_WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: `📢 Tournament "${tournament.name}" is now full and locked. Ready for lobby assignment.`,
+      const updatedSlots = (tournament.currentSlots || 0) + 1;
+      const updates = {
+        currentSlots: updatedSlots,
+        teams: FieldValue.arrayUnion(teamId),
+        teamObjects: FieldValue.arrayUnion({
+          teamId,
+          teamName: team.name || null,
+          players: members.map(m => ({
+            steamId: m.steamId,
+            username: m.username || null,
+            discordId: m.discordId || null,
+          })),
         }),
-      });
+      };
+
+      if (updatedSlots === tournament.maxSlots && !tournament.isLocked) {
+        updates.isLocked = true;
+        updates.graceStart = new Date();
+        if (ADMIN_WEBHOOK) {
+          try {
+            await fetch(ADMIN_WEBHOOK, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: `📢 Tournament "${tournament.name}" is now full and locked. Ready for lobby assignment.`,
+              }),
+            });
+          } catch (e) {
+            console.warn('Webhook failed:', e?.message || e);
+          }
+        }
+      }
+
+      await tournamentRef.update(updates);
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
     }
-  }
-
-  await tournamentRef.update(updates);
-
-  return new Response(JSON.stringify({ success: true }), { status: 200 });
-}
-const rankEligibleMembers = members.filter(m => typeof m.rankTier === 'number');
-if (rankEligibleMembers.length === 0) {
-  return new Response(JSON.stringify({ message: 'Cannot calculate team average rank: no valid rank tiers found.' }), { status: 400 });
-}
-
-const totalRankTier = rankEligibleMembers.reduce((sum, m) => sum + m.rankTier, 0);
-const averageRankTier = Math.round(totalRankTier / rankEligibleMembers.length);
-
-if (!rankTierMatchesBracket(averageRankTier, tournament.bracket)) {
-  const avgRankName = convertRankTierToRank(averageRankTier);
-  return new Response(
-    JSON.stringify({
-      message: `Team average rank is ${avgRankName}. Please find a tournament that matches your team's average rank.`,
-    }),
-    { status: 400 }
-  );
-}
 
     return new Response(JSON.stringify({ message: 'Invalid tournament type' }), { status: 400 });
   } catch (err) {

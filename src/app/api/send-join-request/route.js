@@ -58,7 +58,8 @@ export async function POST(req) {
     const message = `👋 User **${userName}** is requesting to join your team.\n\n🔗 [View player profile](${profileUrl})`;
 
     // Send message to bot server
-    const botUrl = process.env.BOT_SERVER_URL || 'http://localhost:3001';
+    const botUrl = process.env.BOT_SERVER_URL=https;//dota-platform-cyberstars.vercel.app/
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 

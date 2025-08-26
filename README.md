@@ -14,7 +14,12 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+if (process.env.NODE_ENV !== "production") {
+  console.log("👉 Open http://localhost:3000 with your browser to see the result.");
+} else {
+  console.log(`🚀 Running in production at ${process.env.NEXT_PUBLIC_SITE_URL}`);
+}
+
 
 You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 

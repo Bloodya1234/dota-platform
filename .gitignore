@@ -1,6 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# ----------------
+# Dependencies
+# ----------------
 /node_modules
 /.pnp
 .pnp.*
@@ -10,35 +12,73 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
+# ----------------
+# Testing / Coverage
+# ----------------
 /coverage
 
-# next.js
+# ----------------
+# Next.js
+# ----------------
 /.next/
 /out/
 
-# production
+# ----------------
+# Build artifacts
+# ----------------
 /build
+dist
 
-# misc
-.DS_Store
-*.pem
-
-# debug
+# ----------------
+# Logs / Debug
+# ----------------
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 .pnpm-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
-.env*
+# ----------------
+# Env & secrets
+# ----------------
+# Never commit any env or secret keys
+.env
+.env.*
+*.pem
+serviceAccountKey.json
+firebase-private-key.pem
 
-# vercel
+# ----------------
+# Vercel
+# ----------------
 .vercel
 
-# typescript
+# ----------------
+# TypeScript
+# ----------------
 *.tsbuildinfo
 next-env.d.ts
 
-# secrets
-serviceAccountKey.json
+# ----------------
+# Editors / OS junk
+# ----------------
+.DS_Store
+.idea/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ----------------
+# Firebase local artifacts
+# ----------------
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# ----------------
+# Misc caches
+# ----------------
+.eslintcache
+.turbo/

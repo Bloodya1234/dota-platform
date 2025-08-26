@@ -1,4 +1,6 @@
 'use client';
+import '@/lib/i18n.client'; // гарантирует initReactI18next один раз
+
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -45,7 +47,7 @@ export default function ClientLayout({ children }) {
 
       if (discordId && !alreadyJoined) {
         try {
-          const res = await fetch('http://localhost:3001/check-server-membership', {
+          const res = await fetch('${process.env.BOT_SERVER_URL}check-server-membership', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ discordId }),
@@ -57,7 +59,7 @@ export default function ClientLayout({ children }) {
             await updateDoc(userRef, { joinedDiscordServer: true });
             setUser({ ...userData, joinedDiscordServer: true });
           } else {
-            await fetch('http://localhost:3001/auto-invite', {
+            await fetch(`${process.env.BOT_SERVER_URL}/auto-invite`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ discordId }),
