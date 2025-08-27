@@ -1,9 +1,14 @@
 // src/app/page.js
-import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import LoginClient from './login/LoginClient';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default function Page() {
-  redirect('/login');
+  return (
+    <Suspense fallback={<div>Loading…</div>}>
+      <LoginClient />
+    </Suspense>
+  );
 }

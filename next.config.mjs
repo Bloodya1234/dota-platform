@@ -1,14 +1,24 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // чтобы ESLint не валил продакшн-сборку (можешь убрать позже)
+  // Не роняем билд из-за ESLint (можно убрать позже)
   eslint: {
     ignoreDuringBuilds: true,
   },
 
-  // если раньше отключали lightningcss из-за ошибки — оставь;
-  // когда починим установку optional deps, можно удалить
+  // Отключаем lightningcss, чтобы избежать нативного бинарника
   experimental: {
     optimizeCss: false,
+  },
+
+  // Жёсткий редирект главной страницы на /login
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/login',
+        permanent: false, // 307/308 (не кешируем навсегда)
+      },
+    ];
   },
 };
 
