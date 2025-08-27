@@ -1,11 +1,14 @@
 // src/app/login/page.js
+import { Suspense } from 'react';
+import LoginClient from './LoginClient';
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default function LoginPlain() {
+export default function Page() {
   return (
-    <div style={{minHeight:'100vh',display:'grid',placeItems:'center',fontSize:24}}>
-      Login is alive ✅
-    </div>
+    <Suspense fallback={<div>Loading…</div>}>
+      <LoginClient />
+    </Suspense>
   );
 }
