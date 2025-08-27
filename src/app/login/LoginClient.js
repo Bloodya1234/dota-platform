@@ -17,54 +17,54 @@ export default function LoginClient() {
   useEffect(() => {
     setMounted(true);
 
+    // сохраняем инвайт, обработаем после логина
     const inviteTeam = searchParams.get('inviteTeam');
-    if (inviteTeam) {
-      sessionStorage.setItem('inviteTeam', inviteTeam);
-    }
+    if (inviteTeam) sessionStorage.setItem('inviteTeam', inviteTeam);
 
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) return;
 
       const storedInviteTeam = sessionStorage.getItem('inviteTeam');
       if (storedInviteTeam) {
         try {
-          const userRef = doc(db, 'users', user.uid);
-          const snap = await getDoc(userRef);
+          const ref = doc(db, 'users', user.uid);
+          const snap = await getDoc(ref);
 
           if (snap.exists()) {
             const data = snap.data();
             const current = data.invites?.incoming || [];
             if (!current.includes(storedInviteTeam)) {
-              await updateDoc(userRef, {
+              await updateDoc(ref, {
                 invites: { incoming: [...current, storedInviteTeam] },
               });
             }
           }
-        } catch (err) {
-          console.error('❌ Failed to update invite info:', err);
+        } catch (e) {
+          console.error('❌ Failed to update invite info:', e);
         } finally {
           sessionStorage.removeItem('inviteTeam');
         }
       }
 
-      // после логина идём на подключение Discord
+      // после логина — подключение Discord
       window.location.href = '/connect-discord';
     });
 
-    return () => unsubscribe();
+    return () => unsub();
   }, [searchParams]);
 
   const handleSteamLogin = () => {
     const inviteTeam = searchParams.get('inviteTeam') || '';
+
     const origin =
       typeof window !== 'undefined'
         ? window.location.origin
         : (process.env.NEXT_PUBLIC_BASE_URL || 'https://dota-platform-cyberstars.vercel.app');
 
-    // формируем return_to и realm на основе текущего домена
+    // return_to и realm строим от текущего домена
     const returnToUrl = new URL('/api/steam/return', origin);
     if (inviteTeam) returnToUrl.searchParams.set('inviteTeam', inviteTeam);
 
